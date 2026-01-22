@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer');
 dotenv.config();
 
 const app = express();
+app.disable('x-powered-by');
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:5174';
 const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
 
@@ -96,4 +97,4 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-module.exports = app;
+module.exports = (req, res) => app(req, res);
