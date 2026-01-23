@@ -10,6 +10,7 @@ app.disable('x-powered-by');
 const DEFAULT_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
+  'https://serpvidya.app/',
   'https://delicate-lebkuchen-3924c3.netlify.app'
 ];
 
