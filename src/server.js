@@ -28,17 +28,23 @@ app.use(
     }
   })
 );
+// Parse JSON bodies and simple HTML form submissions
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 app.post('/api/contact', async (req, res) => {
-  const { name, email, project, budget, details } = req.body || {};
+  const { name, email, project, budget, details, message } = req.body || {};
 
-  if (!name || !email || !project || !budget || !details) {
-    return res.status(400).json({ error: 'name, email, project, budget, and details are required' });
+  // Allow either the old project/budget/details combo or the simpler name/email/message payloads
+  const hasContent = Boolean(details || project || budget || message);
+  if (!name || !email || !hasContent) {
+    return res
+      .status(400)
+      .json({ error: 'name, email, and at least one of message/details/project/budget are required' });
   }
 
   const transporterConfigured = Boolean(
@@ -71,18 +77,17 @@ app.post('/api/contact', async (req, res) => {
 
     const fromAddress = process.env.CONTACT_FROM || process.env.SMTP_USER;
 
-    const projectLine = project ? `Project: ${project}` : '';
-    const budgetLine = budget ? `Budget: ${budget}` : '';
-    const detailsLine = details ? `Details: ${details}` : '';
+    const lines = [];
+    if (project) lines.push(`Project: ${project}`);
+    if (budget) lines.push(`Budget: ${budget}`);
+    if (details) lines.push(`Details: ${details}`);
+    if (message) lines.push(`Message: ${message}`);
 
-    const plainBody = [projectLine, budgetLine, detailsLine, '', `From: ${name} (${email})`]
-      .filter(Boolean)
-      .join('\n');
+    const plainBody = [...lines, '', `From: ${name} (${email})`].filter(Boolean).join('\n');
 
+    const htmlLines = lines.map((line) => `<p>${line}</p>`).join('');
     const htmlBody = `
-      <p>${projectLine}</p>
-      <p>${budgetLine}</p>
-      <p>${detailsLine}</p>
+      ${htmlLines}
       <p>From: ${name} (${email})</p>
     `;
 

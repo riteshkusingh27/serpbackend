@@ -41,17 +41,23 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+// Parse JSON bodies and simple HTML form submissions
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 app.post('/api/contact', async (req, res) => {
-  const { name, email, message, institution, address } = req.body || {};
+  const { name, email, message, institution, address, project, budget, details } = req.body || {};
 
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'name, email, and message are required' });
+  // Accept both the simpler message payload and the project/budget/details variant used by older forms
+  const hasContent = Boolean(message || details || project || budget);
+  if (!name || !email || !hasContent) {
+    return res
+      .status(400)
+      .json({ error: 'name, email, and at least one of message/details/project/budget are required' });
   }
 
   const transporterConfigured = Boolean(
@@ -84,15 +90,20 @@ app.post('/api/contact', async (req, res) => {
 
     const fromAddress = process.env.CONTACT_FROM || process.env.SMTP_USER;
 
-    const institutionLine = institution ? `Institution: ${institution}\n` : '';
-    const addressLine = address ? `Address: ${address}\n` : '';
+    const lines = [];
+    if (project) lines.push(`Project: ${project}`);
+    if (budget) lines.push(`Budget: ${budget}`);
+    if (details) lines.push(`Details: ${details}`);
+    if (message) lines.push(`Message: ${message}`);
+    if (institution) lines.push(`Institution: ${institution}`);
+    if (address) lines.push(`Address: ${address}`);
 
-    const plainBody = `${message}\n\nFrom: ${name} (${email})\n${institutionLine}${addressLine}`;
+    const plainBody = [...lines, '', `From: ${name} (${email})`].filter(Boolean).join('\n');
+
+    const htmlLines = lines.map((line) => `<p>${line}</p>`).join('');
     const htmlBody = `
-      <p>${message}</p>
+      ${htmlLines}
       <p>From: ${name} (${email})</p>
-      ${institution ? `<p><strong>Institution:</strong> ${institution}</p>` : ''}
-      ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
     `;
 
     const info = await transporter.sendMail({
