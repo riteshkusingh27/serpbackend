@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 
 dotenv.config();
-
+// url https://delicate-lebkuchen-3924c3.netlify.app
 const app = express();
 const PORT = process.env.PORT || 4000;
 const FRONTEND_ORIGIN =
