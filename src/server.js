@@ -7,16 +7,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://delicate-lebkuchen-3924c3.netlify.app,https://onesolutions.tech/';
-const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+const FRONTEND_ORIGIN =
+  process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://delicate-lebkuchen-3924c3.netlify.app,https://onesolutions.tech';
+const normalizeOrigin = (origin) => (origin || '').replace(/\/+$/g, '');
+const isLocalhost = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\\d+)?$/i.test(normalizeOrigin(origin));
+const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(',')
+  .map((origin) => normalizeOrigin(origin.trim()))
+  .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (!origin || ALLOWED_ORIGINS.includes(normalizedOrigin) || isLocalhost(origin)) {
         return callback(null, true);
       }
 
+      console.warn('Blocked by CORS:', { origin });
       return callback(new Error('Not allowed by CORS'));
     }
   })
@@ -80,9 +87,9 @@ app.post('/api/contact', async (req, res) => {
     `;
 
     const info = await transporter.sendMail({
-      from: `SERP Vidya ERP <${fromAddress}>`,
+      from: `${name} <${fromAddress}>`,
       to: process.env.CONTACT_TO,
-      subject: `Project Inquiry from${name}`,
+      subject: `Project Inquiry from ${name}`,
       replyTo: email,
       text: plainBody,
       html: htmlBody
