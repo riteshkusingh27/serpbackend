@@ -107,9 +107,9 @@ app.post('/api/contact', async (req, res) => {
     `;
 
     const info = await transporter.sendMail({
-      from: `SERP Vidya ERP <${fromAddress}>`,
+      from: ` ${name} <${fromAddress}>`,
       to: process.env.CONTACT_TO,
-      subject: `School ERP inquiry from ${name}`,
+      subject: `Project Enquiry From ${name}`,
       replyTo: email,
       text: plainBody,
       html: htmlBody
