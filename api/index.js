@@ -11,23 +11,26 @@ const DEFAULT_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://serpvidya.app/',
-  'https://delicate-lebkuchen-3924c3.netlify.app'
+  'https://delicate-lebkuchen-3924c3.netlify.app',
+  'https://onesolutions.tech',
+  'https://www.onesolutions.tech'
 ];
 
+const normalizeOrigin = (origin) => (origin || '').replace(/\/+$/g, '');
 const envOrigins = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => normalizeOrigin(origin.trim()))
   .filter(Boolean);
 
-const ALLOWED_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS])).map((o) =>
-  o.replace(/\/+$/, '')
-);
+const ALLOWED_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS])).map(normalizeOrigin);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (!origin || ALLOWED_ORIGINS.includes(normalizedOrigin)) {
       return callback(null, true);
     }
+    console.warn('Blocked by CORS', { origin });
     return callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'OPTIONS'],
