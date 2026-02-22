@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://delicate-lebkuchen-3924c3.netlify.app';
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://delicate-lebkuchen-3924c3.netlify.app,https://onesolutions.tech/';
 const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
 
 app.use(
@@ -28,10 +28,10 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.post('/api/contact', async (req, res) => {
-  const { name, email, message, institution, address } = req.body || {};
+  const { name, email, project, budget, details } = req.body || {};
 
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'name, email, and message are required' });
+  if (!name || !email || !project || !budget || !details) {
+    return res.status(400).json({ error: 'name, email, project, budget, and details are required' });
   }
 
   const transporterConfigured = Boolean(
@@ -44,7 +44,7 @@ app.post('/api/contact', async (req, res) => {
 
   if (!transporterConfigured) {
     console.warn('SMTP not configured. Contact payload logged instead of sending.');
-    console.info({ name, email, institution, address, message });
+    // console.info({ name, email, project, budget, details });
     return res.status(202).json({
       status: 'queued',
       message: 'Email sending not configured yet; message logged for review.'
@@ -64,21 +64,25 @@ app.post('/api/contact', async (req, res) => {
 
     const fromAddress = process.env.CONTACT_FROM || process.env.SMTP_USER;
 
-    const institutionLine = institution ? `Institution: ${institution}\n` : '';
-    const addressLine = address ? `Address: ${address}\n` : '';
+    const projectLine = project ? `Project: ${project}` : '';
+    const budgetLine = budget ? `Budget: ${budget}` : '';
+    const detailsLine = details ? `Details: ${details}` : '';
 
-    const plainBody = `${message}\n\nFrom: ${name} (${email})\n${institutionLine}${addressLine}`;
+    const plainBody = [projectLine, budgetLine, detailsLine, '', `From: ${name} (${email})`]
+      .filter(Boolean)
+      .join('\n');
+
     const htmlBody = `
-      <p>${message}</p>
+      <p>${projectLine}</p>
+      <p>${budgetLine}</p>
+      <p>${detailsLine}</p>
       <p>From: ${name} (${email})</p>
-      ${institution ? `<p><strong>Institution:</strong> ${institution}</p>` : ''}
-      ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
     `;
 
     const info = await transporter.sendMail({
       from: `SERP Vidya ERP <${fromAddress}>`,
       to: process.env.CONTACT_TO,
-      subject: `School ERP inquiry from ${name}`,
+      subject: `Project Inquiry from${name}`,
       replyTo: email,
       text: plainBody,
       html: htmlBody
